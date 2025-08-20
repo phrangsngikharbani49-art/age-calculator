@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Age Calculator</title>
+  <meta name="description" content="Simple, accurate age calculator. Get your age in years, months, days, plus next birthday countdown and more." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎂</text></svg>">
+  <style>
+    :root{
+      --bg: #0b1220; /* deep navy */
+      --card: #121a2b;
+      --muted: #b8c1d9;
+      --text: #e8edff;
+      --accent: #6ee7f8; /* cyan */
+      --accent-2: #a78bfa; /* violet */
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --err: #ef4444;
+      --ring: 0 0 0 3px rgba(110,231,248,.25);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 600px at 10% 0%, rgba(167,139,250,.12), transparent 60%),
+                  radial-gradient(1200px 600px at 90% 20%, rgba(110,231,248,.10), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      display:grid; place-items:center; padding:24px;
+    }
+    .app{width:100%; max-width:960px}
+    .header{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px}
+    .brand{display:flex; align-items:center; gap:12px}
+    .logo{font-size:28px}
+    h1{font-size:clamp(22px, 4vw, 30px); margin:0}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:18px; box-shadow: 0 10px 30px rgba(0,0,0,.25)}
+    .grid{display:grid; gap:16px}
+    @media (min-width: 820px){ .grid{grid-template-columns: 1.2fr .8fr} }
+
+    label{display:block; font-size:14px; color:var(--muted); margin-bottom:8px}
+    .controls{display:flex; gap:12px; flex-wrap:wrap}
+    input[type="date"], input[type="time"], select{
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 16px;
+      outline: none; 
+    }
+    input:focus, select:focus{ box-shadow: var(--ring); border-color: rgba(110,231,248,.4) }
+
+    .btn{appearance:none; border:none; border-radius: 12px; padding:12px 16px; font-weight:600; cursor:pointer; transition: transform .04s ease, filter .1s ease}
+    .btn:active{ transform: translateY(1px) }
+    .btn-primary{ background: linear-gradient(135deg, var(--accent), var(--accent-2)); color:#0b1324 }
+    .btn-ghost{ background: rgba(255,255,255,.06); color: var(--text); border:1px solid rgba(255,255,255,.1) }
+    .btn-line{ background: transparent; color: var(--muted); text-decoration: underline; padding:8px 10px }
+    .btn-row{display:flex; gap:10px; flex-wrap:wrap}
+
+    .stats{display:grid; grid-template-columns: repeat(2, 1fr); gap:12px}
+    @media (min-width: 720px){ .stats{grid-template-columns: repeat(4, 1fr)} }
+    .stat{background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius: 14px; padding:14px}
+    .stat .k{font-size:12px; color:var(--muted)}
+    .stat .v{font-size:20px; font-weight:800; margin-top:6px}
+
+    .result{display:grid; gap:14px}
+    .result .age{font-size: clamp(20px, 4vw, 28px); font-weight:800}
+    .muted{color:var(--muted)}
+    .good{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .err{color:var(--err)}
+    .notice{font-size:14px}
+    .footer{margin-top:20px; font-size:13px; color:var(--muted); text-align:center}
+    .sr-only{position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); border:0}
+  </style>
+</head>
+<body>
+  <main class="app" role="main">
+    <header class="header">
+      <div class="brand" aria-label="Age Calculator">
+        <span class="logo" aria-hidden="true">🎂</span>
+        <h1>Age Calculator</h1>
+      </div>
+      <div class="btn-row">
+        <button id="shareBtn" class="btn btn-ghost" type="button" title="Share this tool">Share</button>
+        <button id="resetBtn" class="btn btn-ghost" type="button" title="Reset">Reset</button>
+        <a id="githubLink" class="btn btn-primary" href="#" target="_blank" rel="noopener">Use on GitHub Pages</a>
+      </div>
+    </header>
+
+    <section class="card grid" aria-label="Calculator">
+      <form id="ageForm" class="grid" onsubmit="return false" aria-describedby="helpText">
+        <div>
+          <label for="dob">Date of Birth</label>
+          <div class="controls">
+            <input id="dob" name="dob" type="date" required />
+            <input id="tob" name="tob" type="time" aria-label="Time of Birth (optional)" />
+            <select id="precision" aria-label="Precision">
+              <option value="full" selected>Full precision</option>
+              <option value="date">Ignore time</option>
+            </select>
+            <button id="calcBtn" class="btn btn-primary" type="button">Calculate</button>
+          </div>
+          <p id="helpText" class="notice muted">Tip: You can paste a date like "2000-05-17" or select it. Time is optional.</p>
+          <p id="error" class="notice err" role="alert" style="display:none"></p>
+        </div>
+
+        <div class="result" aria-live="polite">
+          <div class="age" id="ageLine">—</div>
+          <div class="stats" aria-label="Quick stats">
+            <div class="stat"><div class="k">Total Days</div><div class="v" id="days">—</div></div>
+            <div class="stat"><div class="k">Total Hours</div><div class="v" id="hours">—</div></div>
+            <div class="stat"><div class="k">Total Minutes</div><div class="v" id="minutes">—</div></div>
+            <div class="stat"><div class="k">Total Seconds</div><div class="v" id="seconds">—</div></div>
+          </div>
+          <div class="stats" aria-label="Extra info">
+            <div class="stat"><div class="k">Born on</div><div class="v" id="weekday">—</div></div>
+            <div class="stat"><div class="k">Zodiac</div><div class="v" id="zodiac">—</div></div>
+            <div class="stat"><div class="k">Next Birthday</div><div class="v" id="nextBday">—</div></div>
+            <div class="stat"><div class="k">Time to Next 🎉</div><div class="v" id="untilNext">—</div></div>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <p class="footer">Made with ❤️. Works offline. No data leaves your browser.</p>
+  </main>
+
+  <script>
+    // --- Helpers ---
+    const $ = (id) => document.getElementById(id);
+    const fmt = (n) => new Intl.NumberFormat().format(n);
+
+    function setMaxToday(){
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = String(today.getMonth()+1).padStart(2,'0');
+      const d = String(today.getDate()).padStart(2,'0');
+      $('dob').max = `${y}-${m}-${d}`;
+    }
+
+    function zodiacSign(month, day){
+      // month: 0-based
+      const z = [
+        ["Capricorn",   0,  1],["Aquarius",   0, 20],["Pisces",     1, 19],
+        ["Aries",       2, 21],["Taurus",     3, 20],["Gemini",     4, 21],
+        ["Cancer",      5, 21],["Leo",        6, 23],["Virgo",      7, 23],
+        ["Libra",       8, 23],["Scorpio",    9, 23],["Sagittarius",10, 22],
+        ["Capricorn",  11, 22] // fallback
+      ];
+      const pivot = new Date(2000, month, day);
+      for(let i=0;i<z.length-1;i++){
+        const [name, m, d] = z[i];
+        const start = new Date(2000, m, d);
+        const next  = new Date(2000, z[i+1][1], z[i+1][2]);
+        if(pivot >= start && pivot < next) return name;
+      }
+      return "Capricorn";
+    }
+
+    function plural(n, w){ return n+" "+w+(n===1?"":"s"); }
+
+    function parseDOB(){
+      const dobStr = $('dob').value;
+      if(!dobStr) return null;
+      const [y,m,d] = dobStr.split('-').map(Number);
+      let dt = new Date(y, m-1, d);
+      const t = $('tob').value;
+      const precision = $('precision').value;
+      if(t && precision === 'full'){
+        const [hh,mm] = t.split(':').map(Number);
+        dt = new Date(y, m-1, d, hh, mm);
+      }
+      return dt;
+    }
+
+    function diffYMD(from, to){
+      // returns {years, months, days}
+      let y = to.getFullYear() - from.getFullYear();
+      let m = to.getMonth() - from.getMonth();
+      let d = to.getDate() - from.getDate();
+      if(d < 0){
+        // borrow days from previous month
+        const prevMonth = new Date(to.getFullYear(), to.getMonth(), 0).getDate();
+        d += prevMonth;
+        m -= 1;
+      }
+      if(m < 0){ m += 12; y -= 1; }
+      return {years:y, months:m, days:d};
+    }
+
+    function nextBirthday(from, now){
+      const thisYear = new Date(now.getFullYear(), from.getMonth(), from.getDate(), from.getHours(), from.getMinutes());
+      let target = thisYear;
+      if(thisYear <= now){
+        target = new Date(now.getFullYear()+1, from.getMonth(), from.getDate(), from.getHours(), from.getMinutes());
+      }
+      return target;
+    }
+
+    function humanizeDuration(ms){
+      const sec = Math.floor(ms/1000);
+      const d = Math.floor(sec / 86400);
+      const h = Math.floor((sec % 86400)/3600);
+      const m = Math.floor((sec % 3600)/60);
+      const s = Math.floor(sec % 60);
+      return `${plural(d,'day')}, ${plural(h,'hour')}, ${plural(m,'minute')}, ${plural(s,'second')}`;
+    }
+
+    function showError(msg){
+      const el = $('error');
+      el.textContent = msg; el.style.display = '';
+    }
+    function clearError(){ $('error').style.display = 'none'; }
+
+    function calculate(){
+      clearError();
+      const dob = parseDOB();
+      if(!dob){ showError('Please select a valid date of birth.'); return; }
+      const now = new Date();
+      if(dob > now){ showError('Date of birth cannot be in the future.'); return; }
+
+      const {years, months, days} = diffYMD(dob, now);
+      $('ageLine').textContent = `You are ${years} years, ${months} months, and ${days} days old.`;
+
+      const totalMs = now - dob;
+      const totalDays = Math.floor(totalMs / 86400000);
+      const totalHours = Math.floor(totalMs / 3600000);
+      const totalMinutes = Math.floor(totalMs / 60000);
+      const totalSeconds = Math.floor(totalMs / 1000);
+      $('days').textContent = fmt(totalDays);
+      $('hours').textContent = fmt(totalHours);
+      $('minutes').textContent = fmt(totalMinutes);
+      $('seconds').textContent = fmt(totalSeconds);
+
+      const weekday = new Intl.DateTimeFormat(undefined, { weekday:'long'}).format(dob);
+      $('weekday').textContent = weekday;
+      $('zodiac').textContent = zodiacSign(dob.getMonth(), dob.getDate());
+
+      const nb = nextBirthday(dob, now);
+      $('nextBday').textContent = nb.toLocaleDateString();
+      $('untilNext').textContent = humanizeDuration(nb - now);
+
+      updateURL();
+      startTicker(dob); // update seconds live
+    }
+
+    // live seconds ticker
+    let ticker = null;
+    function startTicker(dob){
+      if(ticker) cancelAnimationFrame(ticker);
+      const tick = ()=>{
+        const now = new Date();
+        const totalMs = now - dob;
+        $('seconds').textContent = fmt(Math.floor(totalMs/1000));
+        $('minutes').textContent = fmt(Math.floor(totalMs/60000));
+        $('hours').textContent   = fmt(Math.floor(totalMs/3600000));
+        $('untilNext').textContent = humanizeDuration(nextBirthday(dob, now) - now);
+        ticker = requestAnimationFrame(tick);
+      };
+      ticker = requestAnimationFrame(tick);
+    }
+
+    function updateURL(){
+      const dob = $('dob').value;
+      const tob = $('tob').value;
+      const p = new URLSearchParams(location.search);
+      if(dob) p.set('dob', dob); else p.delete('dob');
+      if(tob) p.set('t', tob); else p.delete('t');
+      if($('precision').value === 'date') p.set('prec','date'); else p.delete('prec');
+      const url = location.pathname + '?' + p.toString();
+      history.replaceState(null, '', url);
+    }
+
+    function loadFromURL(){
+      const p = new URLSearchParams(location.search);
+      if(p.has('dob')) $('dob').value = p.get('dob');
+      if(p.has('t')) $('tob').value = p.get('t');
+      if(p.get('prec') === 'date') $('precision').value = 'date';
+      if(p.has('dob')) calculate();
+    }
+
+    function share(){
+      updateURL();
+      const url = location.href;
+      if(navigator.share){ navigator.share({title:'Age Calculator', url}).catch(()=>copy(url)); }
+      else copy(url);
+    }
+    function copy(text){
+      navigator.clipboard?.writeText(text);
+      const btn = $('shareBtn');
+      const old = btn.textContent; btn.textContent = 'Link copied!';
+      setTimeout(()=>btn.textContent = old, 1500);
+    }
+
+    // Hook up
+    $('calcBtn').addEventListener('click', calculate);
+    $('dob').addEventListener('change', ()=>{ clearError(); updateURL(); });
+    $('tob').addEventListener('change', updateURL);
+    $('precision').addEventListener('change', updateURL);
+    $('resetBtn').addEventListener('click', ()=>{ $('ageForm').reset(); clearError(); $('ageLine').textContent='—'; document.querySelectorAll('.v').forEach(e=>e.textContent='—'); updateURL(); if(ticker) cancelAnimationFrame(ticker); });
+    $('shareBtn').addEventListener('click', share);
+
+    // GitHub link helper
+    (function setGithubLink(){
+      const a = $('githubLink');
+      a.href = 'https://pages.github.com/';
+      a.title = 'How to deploy on GitHub Pages';
+    })();
+
+    // init
+    setMaxToday();
+    loadFromURL();
+  </script>
+</body>
+</html>
